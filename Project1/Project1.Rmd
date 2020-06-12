@@ -1,0 +1,171 @@
+---
+title: "Data612 - Project 1"
+author: "Abdelmalek Hajjam"
+date: "6/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This Recommender System recommends Arabic Perfumes Fragrances and Colognes to Men from the Middle East region. Each Parfum or Cologne is given a score on the scale from 0 to 5. This is a toy data set with 10 types of cologne and 10 customers (users). I used the package RandomNames to generate random common names in the Middle East. Names of Perfums and Colognes are picked from Arabic fragrances sites that sell these products.
+
+```{r message=FALSE, warning=FALSE}
+library(randomNames)
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+
+```
+
+
+```{r}
+
+# randomly create a toy square matrix with n users and items, ranking 1 to 5
+
+# set simulation vars
+set.seed(12345)
+n <- 10
+percentNAs <- .18
+probs <- c(1-percentNAs, percentNAs)
+
+#use randomNames package to get names of persons randomly (which choose male from middle eastern ethnicity)
+pnames <- randomNames(10, gender=0, ethnicity=6, which.names="first")
+users <- c(pnames)
+
+#could not find a package that can do random type of objects, so I created mine
+
+items <- c("Oud For Greatness","Rasasi La Yuqawam","Halfeti Perfume","Raghba","Armani Prive Oud","ESTEE LAUDER","Club De Nuit","Dehn El Oud Malaki","Baccarat Rouge","Shaghaf Oud")
+
+# generate data
+myData <- as.data.frame(replicate(n, floor(runif(n, 1,6))))
+
+myData <- as.data.frame(
+    lapply(myData, function(df) df[sample(c(TRUE, NA), prob = probs, size = length(df), replace = TRUE) ]),
+    row.names = users,
+    col.names = items)
+
+myData %>% kable(caption = "Arabic Perfumes and Colognes Ratings") %>% kable_styling("striped", full_width = TRUE)
+
+```
+
+
+#### Break your ratings into separate training and test datasets
+
+```{r}
+training_portion <- sample(n, size = floor(n * 0.75), replace=F)
+
+training.data <- myData[training_portion, ]
+testing.data <- myData[-training_portion, ]
+
+training.data %>% kable(caption = "Training Dataset") %>% kable_styling("striped", full_width = TRUE)
+
+testing.data %>% kable(caption = "Testing Dataset") %>% kable_styling("striped", full_width = TRUE)
+
+```
+
+
+
+#### Calculate the raw average (mean) rating for every user-item combination
+
+```{r}
+# raw average rating (training set)
+raw_avg_train <- mean(as.matrix(training.data), na.rm=TRUE)
+raw_avg_train
+```
+
+#### Calculate the RMSE for raw average for both your training data and your test data
+
+```{r}
+RMSE <- function(observed, predicted) {
+    # get RMSE
+    sqrt(mean((observed - predicted)^2, na.rm=TRUE))
+}
+
+# the RMSE for raw average for training set
+RMSE_training.data <- RMSE(as.matrix(training.data), raw_avg_train)
+RMSE_training.data
+
+# the RMSE for raw average for test set
+RMSE_testing.data <- RMSE(as.matrix(testing.data), raw_avg_train)
+RMSE_testing.data
+```
+
+#### calculate the bias for each user and each item
+
+```{r}
+user_bias_training <- rowMeans(as.matrix(training.data), na.rm = T) - raw_avg_train
+user_bias_testing <- rowMeans(as.matrix(testing.data), na.rm = T) - raw_avg_train
+item_bias_training <- colMeans(as.matrix(training.data), na.rm = T) - raw_avg_train
+
+user_bias_training %>% kable(caption = "User Bias Training") %>% kable_styling("striped", full_width = TRUE)
+
+item_bias_training %>% kable(caption = "Item Bias Training") %>% kable_styling("striped", full_width = TRUE)
+
+user_bias_testing %>% kable(caption = "Item Bias Testing") %>% kable_styling("striped", full_width = TRUE)
+```
+
+#### Calculate the baseline predictors for every user-item combination. 
+
+```{r}
+baseline_predictor <- function(rawAvg, userBias, itemBias) {
+    # calculates predictions based on rawaverage and user and item bias calcs
+    userlist <- names(userBias)
+    itemlist <- names(itemBias)
+    df <- data.frame()
+    
+    for (i in userBias) {
+        UserPred <- rawAvg + i + itemBias
+        df <- rbind(df, UserPred)
+    }
+    
+    # Like the videos lectures suggests, we should not exceed our max and min values 
+    df[df > 5] <- 5
+    df[df < 1] <- 1
+    
+    row.names(df) <- userlist
+    names(df) <- itemlist
+    df
+}
+
+training_Predictions <- baseline_predictor(raw_avg_train, user_bias_training, item_bias_training)
+heatmap(as.matrix(training_Predictions), Rowv=NA, Colv=NA, scale = 'none', col = heat.colors(256))
+training_Predictions %>% kable(caption = "Training Predictions") %>% kable_styling("striped", full_width = TRUE)
+
+testing_Predictions <- baseline_predictor(raw_avg_train, user_bias_testing, item_bias_training)
+testing_Predictions %>% kable(caption = "Testing Predictions") %>% kable_styling("striped", full_width = TRUE)
+```
+
+#### Calculate the RMSE for the baseline predictors for both your training data and your test data. 
+
+```{r}
+# the RMSE for the baseline predictors for training set
+RMSE_training_Predictions <- RMSE(as.matrix(training.data), as.matrix(training_Predictions))
+RMSE_training_Predictions
+
+# the RMSE for the baseline predictors for test data
+RMSE_testing_Predictions <- RMSE(as.matrix(testing.data), as.matrix(testing_Predictions))
+RMSE_testing_Predictions
+```
+
+
+#### Summarizing results 
+
+```{r}
+trainVec <- c(RMSE_training.data,
+              RMSE_training_Predictions,
+              (1-RMSE_training_Predictions/RMSE_training.data)*100)
+testVec <- c(RMSE_testing.data, 
+             RMSE_testing_Predictions, 
+             (1-RMSE_testing_Predictions/RMSE_testing.data)*100)
+summary <- data.frame(trainVec, testVec)
+names(summary) <- c("Training", "Testing")
+row.names(summary) <- c("Raw Average RMSE", 
+                       "Simple Predictor RMSE", 
+                       "Percent Improvement")
+
+summary %>% kable(caption = "Summary") %>% kable_styling("striped", full_width = TRUE)
+```
+
+RMSE is lower for the baseline predictor compared to raw average predictor for the Training data set. 20% improvement on the Training data set. For the Testing data set, we've got no improvement. This is due to the fact that the test data set being randomly generated and has no inherent biases and therefore the training biases for items applied to the testing set did not improve performance. On the other hand, these same bias are fit for the training set, hence will clearly improve the RMSE for the training set.
