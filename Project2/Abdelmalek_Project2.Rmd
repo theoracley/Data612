@@ -1,0 +1,209 @@
+---
+title: "Data612 - Project2"
+author: "Abdelmalek Hajjam"
+date: "6/18/2020" 
+output: html_document
+---
+
+### Problem Statement
+
+The goal of this assignment is for you to try out different ways of implementing and configuring a recommender, and to evaluate your different approaches.
+
+For assignment 2, start with an existing dataset of user-item ratings, such as our toy books dataset, MovieLens, Jester [http://eigentaste.berkeley.edu/dataset/] or another dataset of your choosing. Implement at least two of these recommendation algorithms:
+
+• Content-Based Filtering
+
+• User-User Collaborative Filtering
+
+• Item-Item Collaborative Filtering
+
+As an example of implementing a Content-Based recommender, you could build item profiles for a subset of MovieLens movies from scraping http://www.imdb.com/ or using the API at https://www.omdbapi.com/ (which has very recently instituted a small monthly fee). A more challenging method would be to pull movie summaries or reviews and apply tf-idf and/or topic modeling.
+
+You should evaluate and compare different approaches, using different algorithms, normalization techniques, similarity methods, neighborhood sizes, etc. You don’t need to be exhaustive—these are just some suggested possibilities.
+
+You may use the course text’s recommenderlab or any other library that you want.
+
+Please provide at least one graph, and a textual summary of your findings and recommendations.
+
+
+##### Let's load our libraries
+
+```{r, echo=F, message=F, warning=F, error=F, comment=F}
+library(recommenderlab)
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+```
+
+### Dataset
+
+We will use MovieLense data set from recommenderLab. This is the full version found here at https://grouplens.org/datasets/movielens.
+
+So let's read our data and hit it with all the necessary transformations.
+
+```{r}
+
+data(MovieLense)
+movieMatrix<-MovieLense 
+dim(movieMatrix)
+
+# We could also loaded our data from the MovieLense data set found at https://grouplens.org/datasets/movielens
+# ratings = read.csv("https://raw.githubusercontent.com/theoracley/Data612/master/Project2/ratings.csv")
+# 
+# #wide format transformation
+# data<-ratings%>% select (movieId, userId, rating) %>% spread (movieId,rating)
+# 
+# #converting our data into a rating Matrix
+# movieMatrix <- as(as.matrix(data[-c(1)]), "realRatingMatrix")
+```
+
+our Dataset contains 943 Users and 1664 Movies
+
+### Data exploration and Visualization
+
+first let's look at some examples data from the data set
+
+```{r}
+#  check out our Matrix as well as the realRatingMatrix
+str(movieMatrix)
+head(movieMatrix@data [1:5,1:5])
+#  check out the the rating from user1 and user100
+movieMatrix@data[1,1:5]
+movieMatrix@data[100, 1:5]
+
+#Let's pick user900 and see what rating he/she has for 10 column 1500 to 1509
+movieMatrix@data[900,1500:1509]
+
+#length(movieMatrix@data[movieMatrix@data[,]>0])
+```
+
+
+let's check out the distribution
+
+```{r} 
+# the first matrix portion of 100X100 of our big matrix reveals where the users have actually given a rating
+length(movieMatrix@data[100,][movieMatrix@data[100,] > 0])
+
+# Total number of ratings provided by the users
+nratings(movieMatrix)
+
+#we could also Used this to get the count of ratings above 0, but its not optimized
+#length(movieMatrix@data[movieMatrix@data[,]>0])
+
+# Check out the rating distribution
+hist(getRatings(movieMatrix), main = "Distribution Of Ratings", xlim=c(0,5), breaks="FD")
+```
+
+It looks like only 56% rating was done in the first 100X100 portion of our MovieMatrix. Also according to this distribution, on that portion, the most popular rating was 4.
+
+Let's check out the heatmap
+```{r}
+# heatmap of the rating matrix
+image(movieMatrix, main = "Heatmap of the rating matrix")
+```
+
+### Modeling & Preparation
+
+To get the best model, we should select the most relevant data. Because of luck of data, movies that have been selected fewer times will have some bias. the same case for users who have rated few movies, their ratings could be bias too. because normally, we should do some transformations to bring the data from its original form which is not normalized to a better form where that data is normalized. Having said that, we are using the `recommenderlab` package which will do the normalization for us by default. No need to do it ourselves, this package will take care of it. We will also split our dataset as usual for modeling purposes.
+
+
+```{r}
+# selecting the most relevant data
+ratingsMovies <- MovieLense[rowCounts(MovieLense) > 50, colCounts(MovieLense) > 100]
+
+# spliting the dataset
+training <- sample(x = c(TRUE, FALSE), size = nrow(ratingsMovies), replace = TRUE, prob = c(0.8, 0.2))
+train <- ratingsMovies[training, ]
+test <- ratingsMovies[!training, ]
+```
+
+#### Model1 - Item-based
+
+Item-based (model-based) collaborative filtering
+------------------------------------------------
+
+- users will prefer those products similar to ones they have already rated
+
+- based on measuring the similarity between items
+
+- this method explorers the relationship between items
+
+- for each item top n items are stored (rather then storing all the items for an efficiency purposes) based on similarity measures (Cosine or Pearson). Weighted sum is used to finally make recommendation for user.
+
+We will look at the similarity between items, then will build our item-based model where we will recommend movies to users.
+
+
+```{r}
+# compute the item similarity matrix
+similarity_items <- similarity(MovieLense[, 1:4], method = "cosine", which = "items")
+
+# visualize the item similarity matrix
+image(as.matrix(similarity_items), main = "Items similarities")
+```
+
+The yellow diagonal means that each item is similar to itself.More the cell is red, more the items are similar to each other.
+
+
+Let's predict the movies for users
+
+```{r}
+# build recommender model
+recommender_m1 <- Recommender(train, method = "IBCF", parameter = list(k = 30))
+model_details1 <- getModel(recommender_m1)
+
+# prediction
+recommender_predict1 <- predict(object = recommender_m1, newdata = test, n = 6)
+recommender_matrix1 <- sapply(recommender_predict1@items, function(x) {colnames(ratingsMovies)[x]})
+recommender_matrix1[, 1:3] %>% kable() %>% kable_styling(full_width = T) 
+```
+
+#### model2 - User-based
+
+User-based collaborative filtering
+----------------------------------
+
+- Similar users will have similar movie tastes
+
+- based on measuring the similarity between users
+
+- It is a memory based model as loads whole rating matrix into memory
+
+User-based collaborative filtering is a two-step process: first step is the finding for a given user his neighbours (using similarity measures such as Pearson coefficient or Cosine distance). For item not rated by user, we use average rating of that item of user's neighbours.
+
+
+
+```{r}
+# compute the user similarity matrix
+similarity_users <- similarity(MovieLense[1:4, ], method = "pearson", which = "users")
+
+# visualize the user similarity matrix
+image(as.matrix(similarity_users), main = "Users similarities")
+
+recommender_m2 <- Recommender(train, method = "UBCF", parameter = list(k = 25))
+```
+
+The yellow diagonal means the user has the same similarity to itself. the darker the cell is, the more the 2 users have similar taste.
+
+
+Let predict with our user-based recommender
+
+```{r}
+model_details2 <- getModel(recommender_m2)
+
+recommender_predict2 <- predict(object = recommender_m2, newdata = test, n = 6)
+
+recommender_matrix2 <- sapply(recommender_predict2@items, function(x) {colnames(ratingsMovies)[x]})
+recommender_matrix2[, 1:3] %>% kable() %>% kable_styling(full_width = T)
+```
+
+# References
+
+* [Building a Recommendation System with R by Suresh K. Gorakala, Michele Usuelli](https://www.amazon.com/dp/B012O8S1YM/ref=dp-kindle-redirect?_encoding=UTF8&btkr=1)
+* https://stackoverflow.com/questions/11330138/find-columns-with-all-missing-values
+* https://github.com/wwells/CUNY_DATA_643/blob/master/Project1/WWells_P1.Rmd
+* https://rpubs.com/jeknov/movieRec
+* https://rpubs.com/tarashnot/recommender_comparison
+* http://www.infofarm.be/articles/alternating-least-squares-algorithm-recommenderlab
+* http://www.quantumforest.com/2011/10/reading-html-pages-in-r-for-text-processing/
+
+
