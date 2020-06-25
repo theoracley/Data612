@@ -1,0 +1,172 @@
+---
+title: "Data612 - Project3"
+author: "Abdelmalek Hajjam"
+date: "6/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+
+The goal of this assignment is to implement a matrix factorization method—such as singular value decomposition (SVD) or Alternating Least Squares (ALS)—in the context of a recommender system.
+
+Matrix Factorization or matrix decomposition is factorization of that matrix into three matrices. The product of these matrices will produce the original matrix. Matrix Factorization is one of the most popular algorithms to solve co-clustering problem.
+
+Singular Value Decomposition (SVD) is a matrix factorization technique to reduce the dimension of impute data.The idea is to find the direction of maximum variances and retain only those who can considerably explain variation in data. While SVD can achieve a very good result on non-sparse data, in real life SVD doesn’t work so well on data - as real-life data is significantly sparse. SVD function in recommenderLab package uses column-mean as default method for missing values impute. This usually works OK, but results are usually biased.well.
+
+
+
+## Data loading
+
+
+Funk SVD - implements matrix decomposition by the stochastic gradient descent optimization popularized by Simon Funk to minimize the error on the known values. Funk SVD ignores the missing values and compute latent factors only using the values we know. Conceptually, it is a simple iterative optimization process that assumes the existence of a cost function and arbitrary initial values for the optimization variables. if the dimensinality of the rating matrix is high, usually the gradient decent does not perform 
+I will be working with the MovieLens dataset.The MovieLens datasets were collected by GroupLens Research at the University of Minnesota. This particular data set has 100,000 ratings and 3,600 tag applications applied to 9,000 movies by 600 users. It is the data set the GroupLens group recommends for research and education. It is not a static data set. The data I will be using was last updated in September of 2018.
+
+```{r message=F, warning=F}
+library(recommenderlab)
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+```{r}
+# reading Data
+data(MovieLense)
+movieMatrix<-MovieLense
+
+data.frame(as(MovieLense, "matrix")[1:5, 1:5]) %>% kable(col.names = colnames(MovieLense)[1:5]) %>% kable_styling(full_width = T)
+```
+
+## Data Exploration
+
+Let's look at the distribution of rating through visualization.
+
+```{r }
+# distribution of ratings
+MovieLense@data %>% 
+  as.vector() %>% 
+  as_tibble() %>% 
+  filter_all(any_vars(. != 0)) %>% 
+  ggplot(aes(value, fill='red')) + 
+  geom_bar() +
+  labs(title = "Distribution of the ratings", y = "", x = "Ratings") +
+  theme_minimal()
+
+```
+
+Looks like 4 was the most popular rating value.
+
+
+## Modeling
+
+
+**Let's do the evaluation scheme**
+
+```{r}
+# creating evaluation scheme
+set.seed(12345)
+# 5-fold CV; everything that is above 3 is considered a good rating; 5 neighbours will be find for a given user(item) to make recommendation
+eval_scheme<- evaluationScheme(movieMatrix, method = "cross", train = 0.9, given = 5, goodRating = 3, k = 5)
+```
+
+
+#### Let's do the user-based CF evaluation approach with Pearson Coefficient as a similarity measure**
+
+
+**testing user-based CF using centered data and Pearson coefficient as a similarity measure to find neighbours**
+```{r}
+param_ubcf<-list(normalize="center", method = "Cosine")
+result1<- evaluate(eval_scheme, method = "UBCF", type = "ratings", param = param_ubcf)
+avg(result1)
+```
+
+
+**testing SVD method using the following parametrs: k = 10, maxiter = 100, normalize = center**
+```{r}
+param_svd = list(normalize="center", maxiter = 100, k =100)
+result2<- evaluate(eval_scheme, method = "SVD",  param = param_svd, type = "ratings")
+avg(result2)
+```
+
+
+**testing funk SVD method using the following paramentrs: k	 =  10, gamma	 =  0.015, lambda	 =  0.001, normalize	 =  center, min_epochs	 =  50, max_epochs**
+```{r}
+ # testing funk SVD method using the following paramentrs: k	 =  10, gamma	 =  0.015, lambda	 =  0.001, normalize	 =  center, min_epochs	 =  50, max_epochs	 =  200
+param_svdfunk<- list(normalize="center", k = 10, gamma	 =  0.015,lambda	 =  0.001, min_epochs	 =  50, max_epochs	 =  200)
+result3<- evaluate(eval_scheme, method = "SVDF", type = "ratings", param = param_svdfunk)
+avg(result3)
+```
+
+
+#### Models Performance summary:
+
+```{r}
+model1<-cbind(RMSE=avg(result1))
+model2<-cbind(RMSE=avg(result2))
+model3<-cbind(RMSE=avg(result3))
+summary = rbind(model1, model2, model3)
+rownames(summary) <- c("UBCF","SVD","FUNK SVD")
+summary
+#summary %>% kable(col.names = c("UBCF","SVD","FUNK SVD")) %>% kable_styling(full_width = F)
+```
+
+Looks like Funk SVD has the lowest RMSE compare to user-based collaboration filtering and SVD methods, with a small difference in comparison.
+
+
+#### Let's look at the ROC curve of all three methods for 5, 10, 15 and 20 recommendations.
+
+```{r}
+algorithms <- list(
+  "USER-BASED" = list(name="UBCF", param=list(normalize="center", method = "Cosine")),
+  "SVD" = list(name="SVD", param=list(normalize="center", maxiter = 100, k =100)),
+  "FUNK SVD" = list(name = "SVDF", param = list(normalize="center", k = 10, gamma	 =  0.015,lambda	 =  0.001, min_epochs	 =  50, max_epochs	 =  200))
+  
+)
+results <- evaluate(eval_scheme, algorithms, n=c(5, 10, 15, 20))
+plot(results, annotate = 1:4, legend="topleft", main = "ROC")
+```
+
+As we see `user-based` outperformed `SVD` and `SVD Funk` around 5 times in accuracy predictions.
+
+
+## Predicting
+
+Finally let's build the entire model using SVD method and make recommendations.
+
+```{r}
+# splitting our data to training and testing sets
+King_evaluation_scheme<- evaluationScheme(movieMatrix, method = "split", train = 0.9, given = 5, goodRating = 3)
+data.training <-getData(King_evaluation_scheme, "train")
+data.testing <-getData(King_evaluation_scheme, "unknown")
+data.testing.known <- getData(King_evaluation_scheme, "known")
+
+#  building user-based recommendation model
+param_final<- list(normalize = "center", maxiter = 100, k =100)
+king_model <- Recommender(data.training, method = "SVD", param = param_final)
+king_model
+# getting recommendations (top 10)
+final_prediction<- predict (king_model, data.testing, n = 10, type = "topNList")
+final_prediction@items[1]
+final_prediction@ratings[1]
+```
+
+
+## Conclusion
+
+Collaborative filtering is very slow with respect to SVD. SVD is much faster.
+
+SVD handles the problem of scalability and sparsity posed by Collborative filtering.
+
+However the How and why for the VSD on recommending an item to a user is above what we do here. A whole high statistical mathematics knwledge will be required to demystify the theory behind it.
+
+
+
+
+
+
+
