@@ -1,0 +1,162 @@
+---
+title: "Data 612 - Project 5"
+author: "Abdelmalek Hajjam"
+date: "7/5/2020"
+output: html_document
+---
+
+### Objective
+
+Adapt one of your recommendation systems to work with Apache Spark and compare the performance with your previous iteration. 
+
+Things that were taken into consideration were the efficiency of the systems as well as Spark’s complexity. This assignment was completed using sparklyr in R.
+
+### Data Utilized and Loading
+
+our Dataset is the MovieLense from https://grouplens.org/datasets/movielens/
+
+We will be using the ratings csv file with more than 100 rating rows. It has `userid`, `movieid`, `rating` and timestamp.
+
+Since determining the efficiency of Spark is one of the main goals of this assignment, ensuring the datasets were large enough to display any differences while keeping in mind R’s handling capacity was one of the points taken into consideration.
+
+We will be using the RecommenderLab and Spark packages to create an ALS model which will be used for prediction.
+
+
+```{r, echo=F, message=F, warning=F, error=F, comment=F}
+#  loading necessary packages
+library(recommenderlab) 
+library(tictoc)
+library(dplyr)          
+library(tidyr)        
+library(ggplot2)       
+library(sparklyr)
+ 
+```
+
+
+```{r}
+# reading data
+ratings = read.csv("https://raw.githubusercontent.com/theoracley/Data612/master/Project5/ratings.csv")
+
+# transforming to a wide format
+moviesData<-ratings%>% select (movieId, userId, rating) %>% spread (movieId,rating)
+
+# converting the data set into a real rating matrix
+movieMatrix <- as(as.matrix(moviesData[-c(1)]), "realRatingMatrix")
+```
+
+
+### Using RecommenderLab
+
+```{r}
+# splitting data on train and test sets
+eval_Scheme<- evaluationScheme(movieMatrix, method = "split", train = 0.9, given = 5, goodRating = 3)
+training <-getData(eval_Scheme, "train")
+testing <-getData(eval_Scheme, "unknown")
+testing_known <- getData(eval_Scheme, "known")
+
+#  training ALS model
+tic()
+king_model <- Recommender(training, method = "ALS")
+trainingTime <- toc(quiet = TRUE)
+
+
+# making predictions - top 10
+tic()
+king_prediction<- predict (king_model, testing, n = 10, type = "topNList")
+predictionTime <- toc(quiet = TRUE)
+
+```
+
+
+### Using Spark
+
+usually when working with spark, we follow this methodology: `Connect-work-disconnect`
+
+1. Connect using spark_connect()
+
+2. Do some work
+
+3. Disconnect using spark_disconnect()
+
+I'm installing Spark in my local system using ethe following:
+
+install the sparklyr package: `install.packages("sparklyr")`
+
+call spark_install()
+
+
+```{r}
+# -----spark installation in thsi order-----
+# install.packages("sparklyr")
+# library(sparklyr)
+# spark_install()
+
+
+# Connection to Spark
+spark_conn <- spark_connect(master = "local")
+
+# Split for training and testing (75%/25%)
+spark_data <- ratings
+size <- floor(0.75 * nrow(spark_data))
+
+set.seed(98765)
+training_records <- sample(seq_len(nrow(spark_data)), size = size)
+
+training <- spark_data[training_records, ]
+testing <- spark_data[-training_records, ]
+
+#  moving data frames to Spark
+spark_training <- sdf_copy_to(spark_conn, training, "train_ratings", overwrite = TRUE)
+spark_testing <- sdf_copy_to(spark_conn, testing, "test_ratings", overwrite = TRUE)
+
+```
+
+
+### Model training and Prediction
+
+```{r}
+#  building our ALS model
+tic()
+model <- ml_als(spark_training, max_iter = 5, nonnegative = TRUE, rating_col = "rating", user_col = "userId", item_col = "movieId")
+trainingTime_spark <- toc(quiet = TRUE)
+
+# predicting the ratings
+tic()
+sparkPred<-ml_predict(model, spark_training)
+head(sparkPred)
+
+predictionTime_spark <- toc(quiet = TRUE)
+
+
+# here are our top 10 movies we recommend for each user
+ml_recommend(model, type = c("item"), n = 10)
+```
+
+```{r}
+# Disconnect
+spark_disconnect(spark_conn)
+```
+
+
+### Models Comparison 
+
+```{r}
+model1<-cbind(train=trainingTime$toc - trainingTime$tic, predict = predictionTime$toc - predictionTime$tic)
+model2<-cbind(train=trainingTime_spark$toc - trainingTime_spark$tic, predict = predictionTime_spark$toc - predictionTime_spark$tic)
+
+summary = rbind(model1, model2)
+rownames(summary) <- c("RecommenderLab","Spark")
+summary
+```
+
+
+### Conclusion
+
+Moving to spark is greatly advantageous when when processing large dataset. In our case, Spark did not perform well in our training phase, but did very well in the recommendation phase.  Because of the distribution nature of Spark, it's implementation becomes harder and requires parallel processing skills. For that, we must always evaluate complexity again data size. There is no necessity of using spark with its complexity if your data is not that large. Keeping it simple always wins.
+
+
+
+
+
+
