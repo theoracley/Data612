@@ -1,0 +1,63 @@
+---
+title: "Data612 - Discussion 2"
+author: "Abdelmalek Hajjam"
+date: "Summer 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+**For this discussion item, please watch the following talk and summarize what you found to be the most important or interesting points. The first half will cover some of the mathematical techniques covered in this unit's reading and the second half some of the data management challenges in an industrial-scale recommendation system.**
+
+
+### Overview
+
+Christopher Johnson talks about Spotify's recommendation methods at the 2014 Spark Summit.
+
+The effectiveness of industrial scale recommender system requires not only advanced mathematical techniques, but also significant data management skills.
+
+
+
+### What was found
+
+The main points discussed in the video that I could identify where:
+
+The strategy of related artists
+
+Different strategies used by different compete or equivalent companies, from manual curation to really intensive labelling
+
+How spotify uses collaborative filtering as their primary strategy: finding relationships to what they are listening to based on the song but not further metadata
+
+Using Explicit Matrix Factorization for managing a collaborative filtering recommender based on rank by creating smaller, lower rank matrices
+
+Using Implicit Matrix Factorization, think of these as a binary that uses ALS for factorization
+
+Spotify uses implicit ratings - 1s and 0s for listened to or not - but more plays makes your weight greater in their loss function
+
+Hadoop at Spotify in 2009 was a couple computers, by 2014 was a huge network
+
+Spark lets them read the rating matrix from disk ONCE and keep in the rest in RAM
+
+He’s talking about RDDs, now spark support better data management structures.
+
+
+### Hadoop vs Spark
+
+Recommender Systems work and process large amount of data. Algorithms that run recommender systems are time consuming and computationaly demanding.
+
+When the volume of data is too high to process and analyze on a single machine, Apache Spark and Apache Hadoop can simplify the task through parallel processing and distributed processing. 
+
+The high-velocity at which big data is generated requires that the data also be processed very quickly. The volume, velocity, and variety of big data calls for new, innovative techniques and frameworks for collecting, storing, and processing the data, which is why Apache Hadoop and Apache Spark were created at the first place.
+
+Apache Hadoop and Apache Spark are both open-source frameworks for big data processing with some key differences.The major problem of Hadoop is its Input / Output (I/O) performance.It uses the MapReduce to process data.Spark is a fast and general compute engine for Hadoop data which addresses Hadoop's performance issue by caching the data in memory. Spark uses resilient distributed datasets (RDDs). Spark does not provide a distributed file storage system, so it is mainly used for computation, on top of Hadoop.
+
+The key diffrence between Hadoop and Spark is performance.Hadoop is great for batch processing, but not good for iterative processing.Hence Spark was created to fix this. Spark programs iteratively run about 100 times faster than Hadoop in-memory, and 10 times faster on disk. Hadoop MapReduce, instead, writes data to a disk that is read on the next iteration. Because data is reloaded from the disk after every iteration, it is significantly slower than Spark.
+
+
+
+### References
+
+* https://www.youtube.com/watch?v=3LBgiFch4_g
