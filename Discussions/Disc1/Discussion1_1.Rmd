@@ -1,0 +1,79 @@
+---
+title: "Data612 - Discussion1"
+author: "Abdelmalek Hajjam"
+date: "Summer 2020"
+output: html_document
+---
+<div align='center'>
+![](nytimes.png)
+</div>
+
+## Overview
+
+According to Wikipedia, `recommender systems` as a specific type of information filtering (IF) technique that attempts to present information items (movies, music, books, news, images, web pages, etc.) that are likely of interest to the user. That definition goes on to note that recommendations are generally based on an information item (the content-based approach) or the user's social environment (the collaborative filtering approach).
+
+In our example, we'll look at how New York Times system recommends articles and news to subscribers.  
+
+The New York Times publishes over 300 articles, blog posts and interactive stories a day.
+
+Refining the path the readers take through this content — personalizing the placement of articles on the apps and website — can help readers find information relevant to them, such as the right news at the right times, personalized supplements to major events and stories in their preferred multimedia format.
+
+To facilitate this, they have developed an intricate hybrid recommender system.   Most of our observations below will be [based on an article from August of 2015 (ancient!)](https://open.blogs.nytimes.com/2015/08/11/building-the-next-new-york-times-recommendation-engine/).  It is difficult to determine the specifics of their current model or if it even differs at all from the process outlined above, but their current policies and broad descriptions of the system are available at: https://www.nytimes.com/recommendations
+
+## What Models Being used
+
+There are 4 main approaches to recommendations:
+
+- Personalized recommendation: recommend things based on the individual's past behavior
+
+- Social recommendation: recommend things based on the past behavior of similar users
+
+- Item recommendation: recommend things based on the item itself
+
+- A combination of the three approaches above
+
+### Content Based Filtering
+
+News recommendations must perform well on fresh content: breaking news that hasn’t been viewed by many readers yet. Thus, the article data available at publishing time can be useful: the topics, author, desk and associated keyword tags of each article.
+
+Relies on Item and User Profiles to make associations.  Item profiles include = "the topics, author, desk and associated keyword tags of each article."
+
+**Pros**:  User reads 10 articles tagged "politics", confident they'll want another tagged "politics".
+**Cons**: TFIDF, rare tags have a large effect in generating User Profiles. 
+
+### Collaborative Filtering
+
+Collaborative filters surface articles based on what similar readers have read. Similarity is determined by reading history.
+
+Goal is to recommend based on what similar users have read.  
+
+**Pros**: Can find interesting patterns for readers with unusual tastes.   News Specific Downside = Tunnel Vision -- reading preferences too narrowly clustered.
+**Cons**: Cold start problem.
+
+### Collaborative Topic Modeling
+
+Using both techniques NYTimes has got the best of both worlds. They built an algorithm inspired by a technique, Collaborative Topic Modeling (CTM), that models content, adjusts this model by viewing signals from readers, models reader preference and makes recommendations by similarity between preference and content.
+
+NYTimes models each reader based on their topic preferences. They can then recommend articles based on how closely their topics match a reader’s preferred topics.
+
+
+#### Model Content
+
+Uses Latent Dirichlet Allocation (LDA) algorithm to perform text analysis of articles. Determines and weights topics.   
+
+#### Adjust Model Based on User Input
+
+Since words are dependent on context, taking the step to adjust assumptions about the topic content based on the user profiles of those who read the content, helps improve the modelling of the topic. 
+
+#### Adjust User Profile
+
+Based on content and item profiles, iteratively adjusts user profile.   Allows for some noise (clicked on articles they didn't like, etc).  
+
+## Conclusion
+
+By modeling article content and reader preferences with topics, then adjusting based on reading patterns, NYTimes reconceptualized their recommendation engine. Their system is now a successful, large-scale implementation of cutting-edge research in collaborative topic modeling, and it provides significant performance increases when compared with previous algorithms used to make recommendations.
+
+## Sources
+
+* https://www.nytimes.com/content/help/extras/recommendations/recommendations.html
+* [Collaborative Topic Modeling for Recommending Scientific Articles; Wang, Blei](http://www.cs.columbia.edu/~blei/papers/WangBlei2011.pdf)

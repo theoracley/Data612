@@ -1,0 +1,64 @@
+---
+title: "Data612 - Discussion1_2 - Attacks on Recommender System"
+author: "Abdelmalek Hajjam"
+date: "Summer 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Attacks on Recommender Systems
+
+### The problem
+
+Read the article below and consider how to handle attacks on recommender systems. Can you think of a similar example where a collective effort to alter the workings of content recommendations have been successful? How would you design a system to prevent this kind of abuse?
+
+
+### Overview
+
+Recommender systems help users to ﬁnd relevant prod-ucts from the vast quantities that are often available. In the commercial world, recommender systems have known beneﬁts, such as turning web browsers into buyers, the cross-selling of products, instilling customer loyalty...etc. In the re-search to date, the performance of recommender systems has been extensively evaluated across various dimensions, suchas accuracy, coverage, efﬁciency and scalability. 
+
+Recently, the security of recommender systems has received considerable attaentions from the research community. It is difﬁcult, given the open manner in which recommender systems operate, to prevent unscrupulous users from inserting bogus data into a system. We refer to the insertion of such data as an attack.
+
+Collaborative Filtering based Recommender Systems are the most sensitive systems to attacks in which malicious users insert fake profiles into the rating database in order to bias the system’s output (these types of attacks are known as profile injection or Shilling attacks). Purpose of the attacks can be different: to push(push attack)/decrease(nuke attack) some items' ratings by manipulating the recommender system, manipulation of the "Internet opinion" or simply to sabotage the system.
+
+The general description of the profile of a true user and fake user are characterized  as 80% unrated items and 20% rated items for the "true" profile" , where as "fake"" profile consists of 20% unrated items and 80% rated (target items + selected items + filler items). From above description of trusted and fake user profile it is
+clear that to attack a recommender system, attack profile need to be designed as statistically identical to genuine profile as possible.
+
+
+### Types Of Attacks
+
+- Random Attack: take random values for filler items, high/low ratings for target items.
+- Average Attack: attack profiles are generated such that the rating for filler items is the mean or average rating for that item across all the users in the
+database.
+- Segment Attack: the segment attack model is to make inserted bots more similar to the segment market users - to push the item within the relevant community.
+- Bandwagon attack: profiles are generated such that besides giving high ratings to the target items, it also contains only high values for selected items and random values to some filler items .
+- User Shifting: In these types of attacks we basically increment or decrement all ratings for a subset of items per attack profile by a constant amount so as to reduce the similarity between attack profiles.
+- Mixed Attack: In Mixed Attack, attack is on the same target item but that attack is produced from different attack modules.
+- Noise Injection: This type of attack is carried out by adding some noise to ratings according to a standard normal distribution multiplied by a constant, β, which is used to govern the amount of noise to be added. 
+
+
+### Proofing against Attacks
+
+To reduce this risk, various detection techniques have been proposed to detect such attacks, which use diverse features extracted from user profiles. Detection techniques can be described as some descriptive statistics that can be used to capture some of the major characteristics that make an attacker’s profile look different from genuine user’s profile.
+
+- Rating Deviation from Mean Agreement (RDMA) can identify attackers by analysing the profile’s average deviation per item or user.
+- Weighted Deviation from Mean Agreement (WDMA) can help identify anomalies by placing a higher weight on rating deviations for sparse items.
+-  Length Variance (LengthVar) is used to capture how much the length of a given profile varies from average length in the dataset. It is particularly effective in
+detecting attacks with large filler sizes.
+- Degree of Similarity with Top Neighbours (DegSim) is used to capture the average similarity of a profile’s k nearest neighbours.
+
+
+### References
+
+Cambridge Analytica. https://www.theguardian.com/technology/2018/mar/17/facebook-cambridge-analytica-kogan-data-algorithm
+Joseph A. Calandrino, Ann Kilzer, Arvind Narayanan, Edward W. Felten, and Vitaly Shmatikov. 2011. “You Might Also Like:” Privacy Risks of Collaborative Filtering. In IEEE Symposium on Security and Privacy.
+
+Bo Li, Yining Wang, Aarti Singh, and Yevgeniy Vorobeychik. 2016. Data Poisoning Attacks on Factorization-Based Collaborative Filtering. In NIPS.
+
+M. O’Mahony, N. Hurley, N. Kushmerick, and G. Silvestre. 2004. Collaborative Recommendation: A Robustness Analysis. ACM Transactions on Internet Technology 4, 4  (2004), 344-377.
+
+Shyong K Lam and John Riedl. 2004. Shilling recommender systems for fun and profit. 
