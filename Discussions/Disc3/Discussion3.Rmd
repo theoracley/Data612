@@ -1,0 +1,58 @@
+---
+title: "Data612 - Discussion3"
+author: "Abdelmalek Hajjam"
+date: "Summer 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**As more systems and sectors are driven by predictive analytics, there is increasing awareness of the possibility and pitfalls of algorithmic discrimination. In what ways do you think Recommender Systems reinforce human bias? Reflecting on the techniques we have covered, do you think recommender systems reinforce or help to prevent unethical targeting or customer segmentation?  Please provide one or more examples to support your arguments.**
+
+### Introduction
+
+With the enormous amount of big data, companies are eaguer to throw at it any algorithms for data nalysis, prediction and recommendations to derive insight in the name of profit. To accomplish this, companies have to be bias toward algorithms to reflect customer segmentation or clustering. Thereby sometimes targetting a race, culture or anything to do with human factor.
+
+
+### Details && Examples
+
+Recommender Systems can reinforce human bias because the largest subgroup of users will dominate overall statistics; if other subgroups have different needs, their satisfaction will carry less weight in the final analysis. This can result in an incomplete picture of the performance of the system and and obscure the need to identify how to better serve specific demographic groups.
+
+Here are examples of few recommender systems that are bias:
+
+- popularity bias (where the evaluation protocol gives higher accuracy scores to algorithms that favor popular items irrespective of their ability to meet user information needs)
+- misclassified decoys (where a good recommendation is erroneously penalized because data on user preferences is incomplete.)
+- demographic bias ( the patterns of the largest group of users will dominate the list of most-popular items, so favoring popular recommendations will also favor recommendations that are more likely to match the taste of the dominant group of users at the expense of other groups with different favorite items). 
+
+
+There are many ways that recommender selection could reinforce human bias. Consider few examples:
+
+- Advertising unhealthy foods to a demographic thought to be unhealthy
+- Advertising violent video games to those thought to be most interested in voilent content
+- Advertising healthy lifestyles to people thought to have healthy lifestyles
+- Intelligence-building programming to those already watching intelligence-building
+programs
+- Advertising non-intelligence-building programming to viewers that are already watching
+non-intelligence building programs
+
+
+### Conclusion
+
+Recommender systems are a tool, and therefore they can and will be used in both ethical and non-ethical fashions, for good and bad purposes, fairly and unfairly.
+
+What is even more important is the long-term effect of recommender system bias. The long term effect will lead to polarized groups of users.
+
+
+### References:
+
+https://www.brookings.edu/research/algorithmic-bias-detection-and-mitigation-best-practices-and-policies-to-reduce-consumer-harms/
+
+https://meta.wikimedia.org/wiki/Research:Ethical_and_human-centered_AI/Bias_in_recommender_systems
+
+https://medium.com/thoughts-and-reflections/racial-bias-and-gender-bias-examples-in-ai-systems-7211e4c166a1
+
+
+
+
