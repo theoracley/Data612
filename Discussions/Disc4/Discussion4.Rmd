@@ -1,0 +1,55 @@
+---
+title: "Data612 - Discussion4"
+author: "Abdelmalek Hajjam"
+date: "Summer 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Mitigating the Harm of Recommender Systems
+
+**Read one or more of the articles below and consider how to counter the radicalizing effects of recommender systems or ways to prevent algorithmic discrimination.**
+
+Renee Diresta, Wired.com (2018): Up Next: A Better Recommendation System
+https://www.wired.com/story/creating-ethical-recommendation-engines/
+
+Zeynep Tufekci, The New York Times (2018): YouTube, the Great Radicalizer
+https://www.nytimes.com/2018/03/10/opinion/sunday/youtube-politics-radical.html
+
+Sanjay Krishnan, Jay Patel, Michael J. Franklin, Ken Goldberg (n/a): Social Influence Bias in Recommender Systems: A Methodology for Learning, Analyzing, and Mitigating Bias in Ratings
+https://goldberg.berkeley.edu/pubs/sanjay-recsys-v10.pdf
+
+### Overview
+
+Recommendation engines influence the choices we make every day - what book to read next, which song to download, which person to date.
+
+At their best, smart systems serve buyers and sellers alike: Consumers save the time and effort of wading through the vast possibilities of the digital marketplace, and businesses build loyalty and drive sales through differentiated experiences.
+
+But, as with many other new technologies, digital recommendations are also a source of unintended consequences.
+
+It’s hard to argue that Recommender Systems do not play a role in radicalisation. Let's take the case of Youtube, where recommended videos gradually drive users towards more extreme content. Videos about jogging lead to videos about running ultramarathons, videos about vaccines lead to conspiracy theories, and videos about politics lead to other disturbing content. Needless to say, maximizing watchtime is the whole point of YouTube’s algorithms, and this encourages video creators to fight for attention in any way possible. Youtube sheer lack of transparency about exactly how this works makes it nearly impossible to fight radicalisation on the site. After all, without transparency, it is hard to know what can be changed to improve the situation.
+
+### How to counter the radicalizing effects of recommender systems or ways to prevent algorithmic discrimination
+
+A lack of transparency about how algorithms work is usually the case whenever they are used in large systems, whether by private companies or public bodies. As well as deciding what video to show you next, machine learning algorithms are now used to place children in schools, decide on prison sentences, determine credit scores and insurance rates, as well as the fate of immigrants, job candidates and university applicants. And usually we don’t understand how these systems make their decisions.
+
+If we consider radicalism as views that go against norm and fundamentally different from the mainstream, it is not a bad thing as it provides views diversity and I do not see any reasonable grounds here to ban the radical content. 
+
+In turn, this means that trying to write laws to regulate what algorithms should or shouldn’t do becomes a blind process or trial and error. This is what is happening with YouTube for example, and with so many other machine learning algorithms. We are trying to have a say in their outcomes, without a real understanding of how they really work. We need to open up these patented technologies, or at least make them transparent enough that we can regulate them.
+
+### References:
+
+http://people.cs.vt.edu/~naren/papers/ppp.pdf
+
+https://sloanreview.mit.edu/article/the-hidden-side-effects-of-recommendation-systems/
+
+https://medium.com/s/story/what-does-it-mean-to-be-radical-5b97200a1d78
+
+
+
+
+
+
