@@ -1,0 +1,43 @@
+---
+title: "Data612 - Project Proposal"
+author: "Abdelmalek Hajjam"
+date: "Summer 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Recommender System For GoodReads site
+
+Goodreads is a social cataloging website that allows individuals to search freely its database of books, annotations, quotes, and reviews. Users can sign up and register books to generate library catalogs and reading lists. They can also create their own groups of book suggestions, surveys, polls, blogs, and discussions. 
+
+Goodreads' stated mission is "to help people find and share books they love and to improve the process of reading and learning throughout the world. Goodreads addressed what publishers call the `discoverability' problem` by guiding consumers in the digital age to find books they might want to read.
+
+however what they claim is probably not true, since when you visit their site, you do not see any advanced Recommendation System implemented. They keep basing everything on the search, and the recommendation they provide is not really that advanced, to be honest.
+
+I will be using R for this project. Since we will be working with a large dataset (6 M entries), I will be taking advantage of Spark performance. I have Spark installed locally. We will be *performing recommendation* using the Spark ML Alternating Least Squares (ALS) matrix factorization.
+
+
+
+## Data 
+
+The dataset source is from: https://github.com/zygmuntz/goodbooks-10k
+
+It contains 6 million ratings for 10000 most popular books. this data was scrapped from goodReads by this awesome user `zygmuntz`, and was courteously shared with public in github.
+
+I will be using 2 files, the large one, which is `ratings.csv`, and another one `books.csv` which has all the books titles.
+
+The ratings.csv file has 3 columns: 
+
+- user_id:  id of the user who is rating the book
+- book_id:  id of the rated booked
+- rating:   rating the user gives to the book
+
+I will be cross joining the ratings.csv with the books.csv on the `book_id` field to get the books' titles at the end of the recommendation phase.
+
+
+
+
