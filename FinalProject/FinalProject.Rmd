@@ -1,0 +1,220 @@
+---
+title: "Data612 - Final Project"
+author: "Abdelmalek Hajjam"
+date: "Summer 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+`Goodreads` is a social cataloging website that allows individuals to search freely its database of books, annotations, quotes, and reviews. Users can sign up and register books to generate library catalogs and reading lists. They can also create their own groups of book suggestions, surveys, polls, blogs, and discussions. 
+
+Goodreads' stated mission is "to help people find and share books they love and to improve the process of reading and learning throughout the world. Goodreads addressed what publishers call the `discoverability' problem` by guiding consumers in the digital age to find books they might want to read.
+
+however what they claim is probably not true, since when you visit their site, you do not see any advanced Recommendation System implemented. They keep basing everything on the search, and the recommendation they provide is not really that advanced, to be honest.
+
+In this Project, we will create a smart recommender system applied to `Goodreads` data in order to be able to provide personalized books and guide users to select more suitable books that are likely to be interesting to them.
+
+The dataset source is from: https://github.com/zygmuntz/goodbooks-10k
+
+It contains 6 million ratings for 10000 most popular books. this data was scrapped from goodReads by this awesome user `zygmuntz`, and was courteously shared with public in github.
+
+Our dataset contains 2 files, the large one, which is `ratings.csv`, and another one `books.csv` which has all the books' titles.
+
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(knitr)
+library(sparklyr)
+library(data.table)
+library(tictoc)
+```
+
+## Data Loading
+
+```{r }
+# loading dataset from github
+#thedata <- fread("https://raw.githubusercontent.com/theoracley/Data612/master/FinalProject/ratings.csv")
+
+#loading dataset Locally
+thedata <- fread("ratings.csv")
+
+head(thedata)%>% 
+  kable() %>% 
+  kable_styling("striped", full_width = F)
+
+
+str(thedata)
+
+```
+
+As you can see, he file is huge and has almost 6 Million Rating observations with 3 variables
+
+
+## Data Exploration && Visualization
+
+Let’s look at the distribution of rating through visualization.
+
+
+**Rating Distribution**
+
+```{r }
+thedata %>% 
+  ggplot(aes(rating, fill='red')) +
+  geom_bar() +
+  labs(title = "Ratings Distribution", y = "", x = "Ratings") +
+  theme_minimal()
+```
+
+Looks like 4 was the most popular rating value.
+
+
+**Rating Distribution Per User**
+
+```{r }
+thedata %>% 
+  group_by(user_id) %>% 
+  add_tally() %>% 
+  ggplot(aes(n, fill='red')) +
+  geom_histogram(binwidth = function(x) 2 * IQR(x) / (length(x)^(1/3))) +
+  labs(title = "Ratings Distribution per user", y = "", x = "") +
+  theme_minimal()
+```
+
+
+**Ratings Distribution per Book**
+
+```{r }
+
+thedata %>% 
+  group_by(book_id) %>% 
+  add_tally() %>% 
+  ggplot(aes(n, fill='red')) +
+  geom_histogram(bins = 10) +
+  labs(title = "Ratings Distribution per book", y = "", x = "") +
+  theme_minimal()
+```
+
+
+## Data manipulation
+
+let's manipulate the data. If I use all the data in the file, Spark keeps crashing in the recommendation phase, like so:
+
+<div style='background-color:teal'>**Error: org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 140.0 failed 1 times, most recent failure: Lost task 0.0 in stage 140.0 (TID 218, localhost, executor driver): ExecutorLostFailure (executor driver exited caused by one of the running tasks) Reason: Executor heartbeat timed out after 155229 ms Driver stacktrace: at org.apache.spark.scheduler.DAGScheduler.org$apache$spark$scheduler$DAGScheduler$$failJobAndIndependentStages(DAGScheduler.scala:1889) at org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1877) at org.apache.spark.scheduler.DAGScheduler$$anonfun$abortStage$1.apply(DAGScheduler.scala:1876) at scala.collection.mutable.ResizableArray$class.foreach(ResizableArray.scala:59) at scala.collection.mutable.ArrayBuffer.foreach(ArrayBuffer.scala:48) at org.apache.spark.scheduler.DAGScheduler.abortStage(DAGScheduler.scala:1876) at org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:926) at org.apache.spark.scheduler.DAGScheduler$$anonfun$handleTaskSetFailed$1.apply(DAGScheduler.scala:926) at scala.Option.foreach(Option.scala:257) at org.apache.spark.scheduler.DAGScheduler.handleTaskSetFailed(DAGScheduler.scala:926) at** 
+</div>
+
+To avoid crashing, I tried to reduce the data to 3 Million records only (half the size) by picking users that rated at least 125 books and books with at least 500 ratings.
+
+I will be performing Recommendation using Spark `ml_als` - Alternate Least square (ALS) matrix factorization.
+
+```{r }
+# Reducing our data to avoid system crashing                
+ourRatings <- thedata %>% 
+  group_by(user_id) %>% 
+  add_tally(name = "name1") %>% 
+  group_by(book_id) %>% 
+  add_tally(name = "name2") %>% 
+  filter(name1 >= 125 & name2 >= 500) %>% 
+  select(-c("name1", "name2")) %>% 
+  rename(user = user_id,
+         item = book_id)
+
+head(ourRatings)%>% 
+  kable() %>% 
+  kable_styling("striped", full_width = F)
+
+
+dim(ourRatings)
+
+```
+
+We reduced our data to half the size of the original data. therefore we will be working with 3254498 ratings.
+
+
+## Model training with Spark && Prediction
+
+usually when working with spark, we follow this methodology: `Connect-work-disconnect`
+
+1. Connect using spark_connect()
+
+2. Do some work
+
+3. Disconnect using spark_disconnect()
+
+I'm installing Spark in my local system using ethe following:
+
+install the sparklyr package: `install.packages("sparklyr")`
+
+call spark_install()
+
+
+```{r }
+# -----spark installation in thsi order-----
+# install.packages("sparklyr")
+# library(sparklyr)
+# spark_install()
+
+
+
+# connect to spark
+spark_conn <- spark_connect(master = "local")
+
+#start the timer
+tic()
+
+# copy data to spark
+spark_rating <- sdf_copy_to(spark_conn, ourRatings, "spark_rating", overwrite = TRUE)
+
+# split dataset in spark
+splitSize <- spark_rating %>% 
+  sdf_random_split(training = 0.8, testing = 0.2)
+
+# perform recommendation 
+spark_model <- ml_als(splitSize$training, max_iter = 5)
+
+# make prediction
+prediction <- ml_transform(spark_model, splitSize$testing) %>% collect()
+
+PredictionTime_Spark <- toc(quiet = TRUE)
+
+# disconnect from spark
+spark_disconnect(spark_conn)
+
+#print Prediction time by Spark
+PredictionTime_Spark
+
+```
+
+## Applying Prediction
+
+We will load the books data and inner join it with our recommended books, to get the titles for a selected user, in this case `user 4`. In our case, we will recommend the top 6 books for `user 4`. Please note that we are only selecting users that have rated at least 125 books, as per requirements in our system crashing.
+
+```{r }
+# load book names
+book_name <- read.csv("https://raw.githubusercontent.com/theoracley/Data612/master/FinalProject/books.csv")
+
+# select only title and book id from the dataset
+book_name <- book_name %>% 
+  select(c("book_id", "title")) %>% 
+  rename(item = book_id)
+
+# top 6 recommendation for user 4
+prediction %>% 
+  filter(user == 4) %>% 
+  arrange(desc(prediction)) %>% 
+  top_n(6) %>% 
+  inner_join(book_name) %>% 
+  kable() %>% 
+  kable_styling("striped", full_width = T)
+```
+
+## Conclusion
+
+This Project exposes a smart recommender system applied to `Goodreads` environment in order to be able to provide personalized books and guide users to select more suitable books. For example the system will recommend the suitable books that are likely to be interesting for them. Also, users can be guided to select their books in their interest areas based on historical data of all users over a large dataset of books. In this project, we were interested in improving `Goodreads` platform through a recommender system that aims to find similarities between books in the whole books dataset.
+Because the dataset is so large, we took advantage of Spark ML_ALS, powerful algorithm for Alternate Least square (ALS) matrix factorization, to perform the books recommendations for us. Finally we selected user with user_id 4 as a test to see what books our system can recommed for him/her. 
+
+I'm so happy that I was able to learn lot in this class. I'm now confident that I will be bringing this knowledge to my place of work, where I can implement a Recommended system for our healthcare organization.
